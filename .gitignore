@@ -1,0 +1,25 @@
+# ==============================================================================
+# Environment & Secrets (CRITICAL)
+# ==============================================================================
+# Never commit production environment secrets or credentials
+.env
+.env.local
+.env.*.local
+
+# SSL Private Keys (CRITICAL)
+# Protects private keys while allowing public certificates (.crt) if needed
+*.key
+*.pem
+
+# ==============================================================================
+# Runtime & Build Safety Nets
+# ==============================================================================
+# Prevent accidentally tracking runtime logs generated during deployment
+*.log
+
+# Safety net: Prevents tracking pre-compiled artifacts if dropped outside 
+# of the intended Docker build contexts
+*.jar
+*.war
+dist/
+target/
