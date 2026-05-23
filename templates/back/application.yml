@@ -1,0 +1,55 @@
+# ==========================================
+# 1. COMMON CONFIGURATION (Applies to all profiles)
+# ==========================================
+spring:
+  application:
+    name: db-demo
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/your_database}
+    username: ${DB_USER:your_username}
+    password: ${DB_PASSWORD:your_password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+
+---
+# ==========================================
+# 2. DEVELOPMENT PROFILE
+# ==========================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG          # Structures the SQL text
+    org.hibernate.orm.jdbc.bind: TRACE  # SAFE FOR DEV: Logs query parameters (?, ?)
+
+---
+# ==========================================
+# 3. PRODUCTION PROFILE
+# ==========================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    org.hibernate.SQL: ERROR          # Quiet down the SQL noise in prod
+    org.hibernate.orm.jdbc.bind: ERROR  # SAFE FOR PROD: Completely hides parameters
