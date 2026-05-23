@@ -5,9 +5,9 @@ spring:
   application:
     name: db-demo
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/your_database}
-    username: ${DB_USER:your_username}
-    password: ${DB_PASSWORD:your_password}
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
