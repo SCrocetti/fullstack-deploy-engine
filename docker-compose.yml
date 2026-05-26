@@ -1,0 +1,99 @@
+services:
+  db-service:
+    image: postgres:15-alpine
+    container_name: db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ~/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - back-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend-service:
+    image: backend:latest
+    container_name: backend
+    restart: always
+    build:
+      context: ./backend-build
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-service:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SERVER_SERVLET_CONTEXT_PATH: /api
+      SPRING_PROFILES_ACTIVE: ${BACK_PROFILE}
+    depends_on:
+      db-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - back-network
+      - front-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        
+  frontend-service:
+    image: frontend:latest
+    container_name: frontend
+    restart: always
+    build:
+      context: ./frontend-build
+      dockerfile: Dockerfile
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - front-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+      
+  orchestrator-nginx-service:
+    build: ./nginx
+    container_name: orchestrator-nginx
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      frontend-service:
+        condition: service_healthy
+      backend-service:
+        condition: service_healthy
+    networks:
+      - front-network
+      - back-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  front-network:
+    driver: bridge
+  back-network:
+    driver: bridge
