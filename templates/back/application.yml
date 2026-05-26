@@ -3,12 +3,11 @@
 # ==========================================
 spring:
   application:
-    name: db-demo
+    name: project-backend
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-    driver-class-name: ${DB_DRIVER}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
 
   jpa:
     hibernate:
@@ -20,6 +19,16 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+server:
+  servlet:
+    context-path: ${SERVER_SERVLET_CONTEXT_PATH:/api}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
 
 logging:
   level:
@@ -35,10 +44,15 @@ spring:
     activate:
       on-profile: dev
 
+management:
+  endpoint:
+    health:
+      show-details: always
+
 logging:
   level:
-    org.hibernate.SQL: DEBUG          # Structures the SQL text
-    org.hibernate.orm.jdbc.bind: TRACE  # SAFE FOR DEV: Logs query parameters (?, ?)
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
 
 ---
 # ==========================================
@@ -49,7 +63,12 @@ spring:
     activate:
       on-profile: prod
 
+management:
+  endpoint:
+    health:
+      show-details: never
+
 logging:
   level:
-    org.hibernate.SQL: ERROR          # Quiet down the SQL noise in prod
-    org.hibernate.orm.jdbc.bind: ERROR  # SAFE FOR PROD: Completely hides parameters
+    org.hibernate.SQL: ERROR
+    org.hibernate.orm.jdbc.bind: ERROR
