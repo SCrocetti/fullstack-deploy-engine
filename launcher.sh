@@ -72,7 +72,29 @@ do_compile() {
 }
 
 # ==============================================================================
-# 3. WORKSPACE CLEANUP FUNCTION
+# 3. SSH AGENT CHECK FUNCTION
+# ==============================================================================
+do_check_ssh_agent(){
+    local KEY_PATH="$HOME/.ssh/id_ed25519_project_deployer"
+
+    if ! ssh-add -l > /dev/null 2>&1; then
+        if [ "$SYSTEM_LANG" = "es" ]; then
+            echo "🔒 El agente SSH está vacío. Ingrese la passphrase:"
+        else
+            echo "🔒 SSH agent is empty. Please enter your passphrase:"
+        fi
+        
+        ssh-add "$KEY_PATH" || exit 1
+    else
+        if [ "$SYSTEM_LANG" = "es" ]; then
+            echo "✅ Clave SSH detectada en el agente."
+        else
+            echo "✅ SSH key detected in the agent."
+        fi
+    fi
+}
+# ==============================================================================
+# 4. WORKSPACE CLEANUP FUNCTION
 # ==============================================================================
 do_clear() {
     if [ "$SYSTEM_LANG" = "es" ]; then
@@ -84,7 +106,7 @@ do_clear() {
 }
 
 # ==============================================================================
-# 4. INTERACTIVE ORCHESTRATION INTERFACE
+# 5. INTERACTIVE ORCHESTRATION INTERFACE
 # ==============================================================================
 if [ "$SYSTEM_LANG" = "es" ]; then
     echo "--- MOTOR DE DESPLIEGUE FULLSTACK ---"
@@ -141,6 +163,7 @@ case $OPC in
             exit 1
         fi
         do_compile
+        do_check_ssh_agent
         if [ "$SYSTEM_LANG" = "es" ]; then
             echo "🌐 Enviando construcciones y metadatos a la arquitectura remota..."
         else
