@@ -4,18 +4,23 @@ services:
     container_name: db
     restart: always
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB_FILE: /run/secrets/db_name
+      POSTGRES_USER_FILE: /run/secrets/db_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     volumes:
-      - ~/data/postgres:/var/lib/postgresql/data
+      - /home/deployer/data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
+      # CAMBIO: Leemos los secretos reales para que pg_isready no use el usuario 'postgres' por defecto
+      test: ["CMD-SHELL", "pg_isready -U $$(cat /run/secrets/db_user) -d $$(cat /run/secrets/db_name)"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
       - back-network
+    secrets:
+      - db_name
+      - db_user
+      - db_password
     logging:
       driver: "json-file"
       options:
@@ -30,22 +35,22 @@ services:
       context: ./backend-build
       dockerfile: Dockerfile
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db-service:5432/${DB_NAME}
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      SERVER_SERVLET_CONTEXT_PATH: /api
+      SPRING_CONFIG_IMPORT: "optional:file:/run/secrets/spring_secrets.properties"
       SPRING_PROFILES_ACTIVE: ${BACK_PROFILE}
     depends_on:
       db-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/actuator/health"]
+      # CAMBIO: Unificamos a -qO- para limpiar los logs del contenedor de Spring
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/actuator/health"]
       interval: 10s
       timeout: 5s
       retries: 3
     networks:
       - back-network
       - front-network
+    secrets:
+      - spring_secrets
     logging:
       driver: "json-file"
       options:
@@ -60,7 +65,7 @@ services:
       context: ./frontend-build
       dockerfile: Dockerfile
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -83,6 +88,12 @@ services:
         condition: service_healthy
       backend-service:
         condition: service_healthy
+    healthcheck:
+      # CAMBIO: Cambiamos el truco de Bash por wget, asumiendo que este Nginx también corre sobre Alpine/Debian
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
       - front-network
     logging:
