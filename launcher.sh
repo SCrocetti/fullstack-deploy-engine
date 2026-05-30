@@ -133,9 +133,7 @@ do_compile() {
         
     mkdir -p ./frontend-build
     cp -r "$FRONT_DIR/dist" ./frontend-build/dist >> "$LOG_FILE" 2>&1
-
-    [ -f "$FRONT_DIR/nginx.conf" ] && cp "$FRONT_DIR/nginx.conf" ./frontend-build/
-    [ -f "$FRONT_DIR/Dockerfile" ] && cp "$FRONT_DIR/Dockerfile" ./frontend-build/
+    cp -r ./nginx/* ./frontend-build/ >> "$LOG_FILE" 2>&1
 }
 
 do_check_ssh_agent(){
@@ -174,7 +172,7 @@ case $OPC in
         do_compile
         echo "${TXT_TRIGGER_LOCAL[$SYSTEM_LANG]}"
         do_inject_secrets
-
+        
         docker compose up -d --build --force-recreate --remove-orphans >> "$LOG_FILE" 2>&1
 
         if [ $? -eq 0 ]; then
