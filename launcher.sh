@@ -4,228 +4,240 @@
 # 1. ENVIRONMENT VARIABLES LOADING & LANGUAGE SETUP
 # ==============================================================================
 if [ -f .env ]; then
-   export $(grep -v '^#' .env | grep -v '^$' | xargs)
+   set -a
+   source .env
+   set +a
 else
     echo "❌ Error: Required .env file not found. / No se encontró el archivo .env."
     exit 1
 fi
 
-# Default to English if SYSTEM_LANG is not explicitly specified in .env
 if [ -z "$SYSTEM_LANG" ]; then
     SYSTEM_LANG="en"
 fi
 
+declare -A TXT_EXEC_TRACE TXT_WIPING_CTX TXT_START_BUILD TXT_ERR_PATHS \
+           TXT_BUILD_BACKEND TXT_ERR_BACKEND TXT_BUILD_FRONTEND \
+           TXT_ERR_FRONTEND TXT_SSH_EMPTY TXT_SSH_DETECTED \
+           TXT_DEPLOY_MENU_TITLE TXT_DEPLOY_MENU_LOC TXT_DEPLOY_MENU_REM \
+           TXT_DEPLOY_MENU_PROMPT TXT_TRIGGER_LOCAL TXT_LOCAL_SUCCESS \
+           TXT_ERR_LOCAL TXT_ERR_SEC_TITLE TXT_ERR_SEC_REQ TXT_ERR_SEC_CURR \
+           TXT_ERR_SEC_ABORT TXT_PREPARE_REMOTE TXT_ERR_REMOTE_DIR \
+           TXT_ERR_SCP TXT_SWITCH_REMOTE TXT_REMOTE_SUCCESS \
+           TXT_ERR_REMOTE TXT_INVALID_OPTION
+
+# --- Spanish (es) ---
+TXT_EXEC_TRACE[es]="=== TRAZA DE EJECUCIÓN DEL LANZADOR %s ===\n"
+TXT_WIPING_CTX[es]="🧹 Limpiando contextos temporales por error en ejecución..."
+TXT_START_BUILD[es]="📦 --- INICIANDO PIPELINES DE COMPILACIÓN ---"
+TXT_ERR_PATHS[es]="❌ Error: Las rutas BACK_DIR o FRONT_DIR no son válidas. Verifique el .env."
+TXT_BUILD_BACKEND[es]="☕ Compilando artefactos del Backend (Spring Boot / Maven)..."
+TXT_ERR_BACKEND[es]="❌ Error: Falló la compilación del Backend. Revise %s\n"
+TXT_BUILD_FRONTEND[es]="📦 Compilando assets estáticos del Frontend (pnpm Engine)..."
+TXT_ERR_FRONTEND[es]="❌ Error: Falló la compilación del Frontend. Revise %s\n"
+TXT_SSH_EMPTY[es]="🔒 El agente SSH está vacío. Ingrese la passphrase:"
+TXT_SSH_DETECTED[es]="✅ Clave SSH detectada en el agente."
+TXT_DEPLOY_MENU_TITLE[es]="--- MOTOR DE DESPLIEGUE FULLSTACK ---"
+TXT_DEPLOY_MENU_LOC[es]="1) Desplegar Infraestructura LOCAL"
+TXT_DEPLOY_MENU_REM[es]="2) Desplegar Infraestructura REMOTA (Destino SSH)"
+TXT_DEPLOY_MENU_PROMPT[es]="Seleccione el pipeline de destino [1-2]: "
+TXT_TRIGGER_LOCAL[es]="🏠 Iniciando la inicialización de contenedores LOCALES..."
+TXT_LOCAL_SUCCESS[es]="✅ DESPLIEGUE LOCAL EXITOSO"
+TXT_ERR_LOCAL[es]="❌ Error: La orquestación local ha fallado. Detalles en %s\n"
+TXT_ERR_SEC_TITLE[es]="❌ ERROR DE SEGURIDAD CRÍTICO:"
+TXT_ERR_SEC_REQ[es]="   El despliegue remoto requiere que BACK_PROFILE sea exactamente 'prod'."
+TXT_ERR_SEC_CURR[es]="   Perfil actual detectado en .env: '%s'\n"
+TXT_ERR_SEC_ABORT[es]="   Cancelando la operación para evitar corrupción de entorno."
+TXT_PREPARE_REMOTE[es]="🌐 Preparando entorno remoto y enviando construcciones..."
+TXT_ERR_REMOTE_DIR[es]="❌ Error: No se pudo preparar el directorio remoto en el servidor."
+TXT_ERR_SCP[es]="❌ Error: Falló la transferencia de archivos (scp)."
+TXT_SWITCH_REMOTE[es]="🚀 Ejecutando la orquestación de contenedores en el servidor remoto..."
+TXT_REMOTE_SUCCESS[es]="✅ DESPLIEGUE REMOTO EXITOSO"
+TXT_ERR_REMOTE[es]="❌ Error: La orquestación remota falló. Revise los detalles al final de %s\n"
+TXT_INVALID_OPTION[es]="Opción de menú inválida. Abortando secuencia del motor."
+
+# --- English (en) ---
+TXT_EXEC_TRACE[en]="=== LAUNCHER EXECUTION TRACE %s ===\n"
+TXT_WIPING_CTX[en]="🧹 Wiping temporary build contexts due to failure..."
+TXT_START_BUILD[en]="📦 --- STARTING APPLICATION BUILD PIPELINES ---"
+TXT_ERR_PATHS[en]="❌ Error: BACK_DIR or FRONT_DIR path is invalid. Check your .env file."
+TXT_BUILD_BACKEND[en]="☕ Compiling Backend Artifacts (Spring Boot / Maven)..."
+TXT_ERR_BACKEND[en]="❌ Error: Backend compilation failed. Check %s\n"
+TXT_BUILD_FRONTEND[en]="📦 Compiling Frontend Static Assets (pnpm Engine)..."
+TXT_ERR_FRONTEND[en]="❌ Error: Frontend compilation failed. Check %s\n"
+TXT_SSH_EMPTY[en]="🔒 SSH agent is empty. Please enter your passphrase:"
+TXT_SSH_DETECTED[en]="✅ SSH key detected in the agent."
+TXT_DEPLOY_MENU_TITLE[en]="--- FULLSTACK DEPLOY ENGINE ---"
+TXT_DEPLOY_MENU_LOC[en]="1) Deploy LOCAL Infrastructure"
+TXT_DEPLOY_MENU_REM[en]="2) Deploy REMOTE Infrastructure (SSH Target)"
+TXT_DEPLOY_MENU_PROMPT[en]="Select target pipeline destination [1-2]: "
+TXT_TRIGGER_LOCAL[en]="🏠 Triggering LOCAL container initialization..."
+TXT_LOCAL_SUCCESS[en]="✅ LOCAL DEPLOYMENT SUCCESSFUL"
+TXT_ERR_LOCAL[en]="❌ Error: Local Docker Compose orchestration failed. See %s\n"
+TXT_ERR_SEC_TITLE[en]="❌ CRITICAL SECURITY ERROR:"
+TXT_ERR_SEC_REQ[en]="   Remote deployment requires BACK_PROFILE to be exactly 'prod'."
+TXT_ERR_SEC_CURR[en]="   Current profile detected in .env: '%s'\n"
+TXT_ERR_SEC_ABORT[en]="   Aborting operation to prevent environment mismatch."
+TXT_PREPARE_REMOTE[en]="🌐 Preparing remote host environment and shipping builds..."
+TXT_ERR_REMOTE_DIR[en]="❌ Error: Failed to initialize target directory space on remote server."
+TXT_ERR_SCP[en]="❌ Error: File payload delivery failed (scp)."
+TXT_SWITCH_REMOTE[en]="🚀 Executing container orchestration on remote server..."
+TXT_REMOTE_SUCCESS[en]="✅ REMOTE DEPLOYMENT SUCCESSFUL"
+TXT_ERR_REMOTE[en]="❌ Error: Deployment sequence failed on remote engine host. Check tail logs in %s\n"
+TXT_INVALID_OPTION[en]="Invalid menu alternative. Aborting engine sequence."
+
+LOG_FILE="./launcher.log"
+printf "${TXT_EXEC_TRACE[$SYSTEM_LANG]}" "$(date)" > "$LOG_FILE"
+
 # ==============================================================================
-# 2. LOCAL COMPILATION FUNCTION
+# 2. MOTOR ARCHITECTURE UTILITIES & HOOKS
 # ==============================================================================
-do_compile() {
-    if [ "$SYSTEM_LANG" = "es" ]; then
-        echo "📦 --- INICIANDO PIPELINES DE COMPILACIÓN ---"
-    else
-        echo "📦 --- STARTING APPLICATION BUILD PIPELINES ---"
-    fi
-
-    # Strict path validation
-    if [ ! -d "$BACK_DIR" ] || [ ! -d "$FRONT_DIR" ]; then
-        if [ "$SYSTEM_LANG" = "es" ]; then
-            echo "❌ Error: Las rutas BACK_DIR o FRONT_DIR no son válidas. Verifique el .env."
-        else
-            echo "❌ Error: BACK_DIR or FRONT_DIR path is invalid. Check your .env file."
-        fi
-        exit 1
-    fi
-
-    if [ "$SYSTEM_LANG" = "es" ]; then
-        echo "☕ Compilando artefactos del Backend (Spring Boot / Maven)..."
-    else
-        echo "☕ Compiling Backend Artifacts (Spring Boot / Maven)..."
-    fi
-    
-    cd "$BACK_DIR" && ./mvnw clean package -DskipTests > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        exit 1
-    fi
-    cd - > /dev/null
-    
-    mkdir -p ./backend-build
-    cp "$BACK_DIR"/target/*.jar ./backend-build/app.jar > /dev/null 2>&1
-    [[ -f "$BACK_DIR"/Dockerfile ]] && cp "$BACK_DIR"/Dockerfile ./backend-build/
-
-    if [ "$SYSTEM_LANG" = "es" ]; then
-        echo "📦 Compilando assets estáticos del Frontend (pnpm Engine)..."
-    else
-        echo "📦 Compilating Frontend Static Assets (pnpm Engine)..."
-    fi
-    
-    cd "$FRONT_DIR" && pnpm build > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        exit 1
-    fi
-    cd - > /dev/null
-        
-    mkdir -p ./frontend-build
-
-    cp -r "$FRONT_DIR"/dist/* ./frontend-build/dist/ > /dev/null 2>&1
-
-    [ -f "$FRONT_DIR"/nginx.conf ] && cp "$FRONT_DIR"/nginx.conf ./frontend-build/
-    [ -f "$FRONT_DIR"/Dockerfile ] && cp "$FRONT_DIR"/Dockerfile ./frontend-build/
+do_clear() {
+    echo "${TXT_WIPING_CTX[$SYSTEM_LANG]}"
+    rm -rf ./backend-build ./frontend-build ./secrets > /dev/null 2>&1
 }
 
-# ==============================================================================
-# 3. SSH AGENT CHECK FUNCTION
-# ==============================================================================
+do_compile() {
+    echo "${TXT_START_BUILD[$SYSTEM_LANG]}"
+
+    if [ ! -d "$BACK_DIR" ] || [ ! -d "$FRONT_DIR" ]; then
+        echo "${TXT_ERR_PATHS[$SYSTEM_LANG]}"
+        exit 1
+    fi
+
+    echo "${TXT_BUILD_BACKEND[$SYSTEM_LANG]}"
+    
+    cd "$BACK_DIR" && ./mvnw clean package -DskipTests >> "$LOG_FILE" 2>&1
+    MVN_EXIT=$?
+    cd - > /dev/null
+    
+    if [ $MVN_EXIT -ne 0 ]; then
+        printf "${TXT_ERR_BACKEND[$SYSTEM_LANG]}" "$LOG_FILE"
+        exit 1
+    fi
+    
+    mkdir -p ./backend-build
+    cp "$BACK_DIR/target/app.jar" ./backend-build/app.jar >> "$LOG_FILE" 2>&1
+    [[ -f "$BACK_DIR/Dockerfile" ]] && cp "$BACK_DIR/Dockerfile" ./backend-build/
+
+    echo "${TXT_BUILD_FRONTEND[$SYSTEM_LANG]}"
+    
+    cd "$FRONT_DIR" && pnpm build >> "$LOG_FILE" 2>&1
+    PNPM_EXIT=$?
+    cd - > /dev/null
+    
+    if [ $PNPM_EXIT -ne 0 ]; then
+        printf "${TXT_ERR_FRONTEND[$SYSTEM_LANG]}" "$LOG_FILE"
+        exit 1
+    fi
+        
+    mkdir -p ./frontend-build
+    cp -r "$FRONT_DIR/dist" ./frontend-build/dist >> "$LOG_FILE" 2>&1
+
+    [ -f "$FRONT_DIR/nginx.conf" ] && cp "$FRONT_DIR/nginx.conf" ./frontend-build/
+    [ -f "$FRONT_DIR/Dockerfile" ] && cp "$FRONT_DIR/Dockerfile" ./frontend-build/
+}
+
 do_check_ssh_agent(){
     local KEY_PATH="$HOME/.ssh/id_ed25519_project_deployer"
 
     if ! ssh-add -l > /dev/null 2>&1; then
-        if [ "$SYSTEM_LANG" = "es" ]; then
-            echo "🔒 El agente SSH está vacío. Ingrese la passphrase:"
-        else
-            echo "🔒 SSH agent is empty. Please enter your passphrase:"
-        fi
-        
+        echo "${TXT_SSH_EMPTY[$SYSTEM_LANG]}"
         ssh-add "$KEY_PATH" || exit 1
     else
-        if [ "$SYSTEM_LANG" = "es" ]; then
-            echo "✅ Clave SSH detectada en el agente."
-        else
-            echo "✅ SSH key detected in the agent."
-        fi
+        echo "${TXT_SSH_DETECTED[$SYSTEM_LANG]}"
     fi
 }
-# ==============================================================================
-# 4. WORKSPACE CLEANUP FUNCTION
-# ==============================================================================
-do_clear() {
-    if [ "$SYSTEM_LANG" = "es" ]; then
-        echo "🧹 Eliminando contextos de construcción temporales del disco..."
-    else
-        echo "🧹 Wiping temporary build contexts from disk..."
-    fi
-    rm -rf ./backend-build ./frontend-build > /dev/null 2>&1
+
+do_inject_secrets() {
+    mkdir -p ./secrets
+    echo "$DB_NAME" > ./secrets/db_name.txt
+    echo "$DB_USER" > ./secrets/db_user.txt
+    echo "$DB_PASSWORD" > ./secrets/db_password.txt
+    
+    echo "spring.datasource.url=jdbc:postgresql://db-service:5432/\${FILE:/run/secrets/db_name}" > ./secrets/spring_secrets.properties
+    echo "spring.datasource.username=\${FILE:/run/secrets/db_user}" >> ./secrets/spring_secrets.properties
+    echo "spring.datasource.password=\${FILE:/run/secrets/db_password}" >> ./secrets/spring_secrets.properties
 }
 
 # ==============================================================================
-# 5. INTERACTIVE ORCHESTRATION INTERFACE
+# 3. INTERACTIVE ORCHESTRATION INTERFACE
 # ==============================================================================
-if [ "$SYSTEM_LANG" = "es" ]; then
-    echo "--- MOTOR DE DESPLIEGUE FULLSTACK ---"
-    echo "1) Desplegar Infraestructura LOCAL"
-    echo "2) Desplegar Infraestructura REMOTA (Destino SSH)"
-    read -p "Seleccione el pipeline de destino [1-2]: " OPC
-else
-    echo "--- FULLSTACK DEPLOY ENGINE ---"
-    echo "1) Deploy LOCAL Infrastructure"
-    echo "2) Deploy REMOTE Infrastructure (SSH Target)"
-    read -p "Select target pipeline destination [1-2]: " OPC
-fi
+echo "${TXT_DEPLOY_MENU_TITLE[$SYSTEM_LANG]}"
+echo "${TXT_DEPLOY_MENU_LOC[$SYSTEM_LANG]}"
+echo "${TXT_DEPLOY_MENU_REM[$SYSTEM_LANG]}"
+read -p "${TXT_DEPLOY_MENU_PROMPT[$SYSTEM_LANG]}" OPC
 
 case $OPC in
     1)
+        do_clear
         do_compile
-        if [ "$SYSTEM_LANG" = "es" ]; then
-            echo "🏠 Iniciando la inicialización de contenedores LOCALES..."
-        else
-            echo "🏠 Triggering LOCAL container initialization..."
-        fi
+        echo "${TXT_TRIGGER_LOCAL[$SYSTEM_LANG]}"
+        do_inject_secrets
 
-        docker compose up -d --build --force-recreate --remove-orphans > /dev/null 2>&1
+        docker compose up -d --build --force-recreate --remove-orphans >> "$LOG_FILE" 2>&1
 
         if [ $? -eq 0 ]; then
-            do_clear
-            if [ "$SYSTEM_LANG" = "es" ]; then
-                echo "✅ DESPLIEGUE LOCAL EXITOSO"
-            else
-                echo "✅ LOCAL DEPLOYMENT SUCCESSFUL"
-            fi
+            echo "${TXT_LOCAL_SUCCESS[$SYSTEM_LANG]}"
+            chmod 700 ./secrets
+            chmod 600 ./secrets/*
+            exit 0
         else
-            if [ "$SYSTEM_LANG" = "es" ]; then
-                echo "❌ Error: La orquestación de Docker Compose local ha fallado."
-            else
-                echo "❌ Error: Local Docker Compose orchestration failed."
-            fi
+            printf "${TXT_ERR_LOCAL[$SYSTEM_LANG]}" "$LOG_FILE"
             exit 1
         fi
         ;;
     2)
         if [ "$BACK_PROFILE" != "prod" ]; then
-            if [ "$SYSTEM_LANG" = "es" ]; then
-                echo "❌ ERROR DE SEGURIDAD CRÍTICO:"
-                echo "   El despliegue remoto requiere que BACK_PROFILE sea exactamente 'prod'."
-                echo "   Perfil actual detectado en .env: '$BACK_PROFILE'"
-                echo "   Cancelando la operación para evitar corrupción de entorno."
-            else
-                echo "❌ CRITICAL SECURITY ERROR:"
-                echo "   Remote deployment requires BACK_PROFILE to be exactly 'prod'."
-                echo "   Current profile detected in .env: '$BACK_PROFILE'"
-                echo "   Aborting operation to prevent environment mismatch."
-            fi
+            echo "${TXT_ERR_SEC_TITLE[$SYSTEM_LANG]}"
+            echo "${TXT_ERR_SEC_REQ[$SYSTEM_LANG]}"
+            printf "${TXT_ERR_SEC_CURR[$SYSTEM_LANG]}" "$BACK_PROFILE"
+            echo "${TXT_ERR_SEC_ABORT[$SYSTEM_LANG]}"
             exit 1
         fi
+        do_clear
         do_compile
         do_check_ssh_agent
-        if [ "$SYSTEM_LANG" = "es" ]; then
-            echo "🌐 Enviando construcciones y metadatos a la arquitectura remota..."
-        else
-            echo "🌐 Shipping builds and metadata to the remote server architecture..."
-        fi
+        do_inject_secrets
 
-        # 1. Ejecutar el SCP
-        scp -q -r ./backend-build ./frontend-build ./docker-compose.yml ./nginx project-server:~/project-infra/ > /dev/null 2>&1
+        echo "${TXT_PREPARE_REMOTE[$SYSTEM_LANG]}"
 
-        # 2. VALIDAR SI EL SCP FUE EXITOSO
-        if [ $? -ne 0 ]; then
-            if [ "$SYSTEM_LANG" = "es" ]; then
-                echo "❌ Error: Falló la transferencia de archivos (SCP) al servidor remoto."
-            else
-                echo "❌ Error: File transfer (SCP) to the remote server failed."
-            fi
+        if ! ssh -q project-server "mkdir -p /home/deployer/project-infra && rm -rf /home/deployer/project-infra/secrets && mkdir -p /home/deployer/project-infra/secrets"; then
+            echo "${TXT_ERR_REMOTE_DIR[$SYSTEM_LANG]}"
             exit 1
         fi
 
-        # 3. Solo si el SCP funcionó, procedemos con el SSH
-        if [ "$SYSTEM_LANG" = "es" ]; then
-            echo "🚀 Iniciando el conmutador de servicios en el servidor remoto..."
-        else
-            echo "🚀 Initializing remote containerized services switcher..."
+        # Transferencia encomillando el destino para evitar problemas de interpretación de rutas
+        scp -q -r ./backend-build ./frontend-build ./docker-compose.yml ./nginx ./monitor_stack.sh ./monitor_stack.properties ./secrets project-server:"/home/deployer/project-infra/"
+        if [ $? -ne 0 ]; then
+            echo "${TXT_ERR_SCP[$SYSTEM_LANG]}"
+            exit 1
         fi
+        echo "${TXT_SWITCH_REMOTE[$SYSTEM_LANG]}"
         
-        ssh -q -T project-server << EOF > /dev/null
-            cd ~/project-infra || exit 1
+        ssh -q -T project-server >> "$LOG_FILE" 2>&1 << 'EOF'
+            set -e
+            cd /home/deployer/project-infra
 
-            export DB_NAME="$DB_NAME"
-            export DB_USER="$DB_USER"
-            export DB_PASSWORD="$DB_PASSWORD"
-            export BACK_PROFILE="$BACK_PROFILE"
+            trap "rm -rf backend-build frontend-build secrets" EXIT INT TERM
 
-            docker compose up -d --build --force-recreate --remove-orphans > /dev/null 2>&1
+            docker compose up -d --build --force-recreate --remove-orphans
 
-            DEPLOY_STATUS=\$?
-
-            rm -rf backend-build frontend-build > /dev/null 2>&1
-            exit \$DEPLOY_STATUS
+            trap - EXIT INT TERM
+            chmod 700 ./secrets || true
+            chmod 600 ./secrets/* || true
 EOF
         if [ $? -eq 0 ]; then
+            echo "${TXT_REMOTE_SUCCESS[$SYSTEM_LANG]}"
             do_clear
-            if [ "$SYSTEM_LANG" = "es" ]; then
-                echo "✅ DESPLIEGUE REMOTO EXITOSO"
-            else
-                echo "✅ REMOTE DEPLOYMENT SUCCESSFUL"
-            fi
+            exit 0
         else
-            if [ "$SYSTEM_LANG" = "es" ]; then
-                echo "❌ Error: El despliegue falló en el servidor remoto."
-            else
-                echo "❌ Error: Deployment sequence failed on the remote infrastructure host."
-            fi
+            printf "${TXT_ERR_REMOTE[$SYSTEM_LANG]}" "$LOG_FILE"
+            exit 1
         fi
         ;;
     *)
-        if [ "$SYSTEM_LANG" = "es" ]; then
-            echo "Opción de menú inválida. Abortando secuencia del motor."
-        else
-            echo "Invalid menu alternative. Aborting engine sequence."
-        fi
+        echo "${TXT_INVALID_OPTION[$SYSTEM_LANG]}"
         exit 1
         ;;
 esac
