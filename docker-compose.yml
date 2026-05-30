@@ -10,7 +10,6 @@ services:
     volumes:
       - /home/deployer/data/postgres:/var/lib/postgresql/data
     healthcheck:
-      # CAMBIO: Leemos los secretos reales para que pg_isready no use el usuario 'postgres' por defecto
       test: ["CMD-SHELL", "pg_isready -U $$(cat /run/secrets/db_user) -d $$(cat /run/secrets/db_name)"]
       interval: 5s
       timeout: 5s
@@ -41,7 +40,6 @@ services:
       db-service:
         condition: service_healthy
     healthcheck:
-      # CAMBIO: Unificamos a -qO- para limpiar los logs del contenedor de Spring
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/actuator/health"]
       interval: 10s
       timeout: 5s
@@ -58,38 +56,18 @@ services:
         max-file: "3"
         
   frontend-service:
-    image: frontend:latest
-    container_name: frontend
-    restart: always
     build:
       context: ./frontend-build
       dockerfile: Dockerfile
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    networks:
-      - front-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-      
-  orchestrator-nginx-service:
-    build: ./nginx
-    container_name: orchestrator-nginx
+    image: frontend:latest
+    container_name: frontend
     restart: always
     ports:
       - "80:80"
     depends_on:
-      frontend-service:
-        condition: service_healthy
       backend-service:
         condition: service_healthy
     healthcheck:
-      # CAMBIO: Cambiamos el truco de Bash por wget, asumiendo que este Nginx también corre sobre Alpine/Debian
       test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
       interval: 10s
       timeout: 5s
@@ -101,6 +79,15 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+secrets:
+  db_name:
+    file: ./secrets/db_name.txt
+  db_user:
+    file: ./secrets/db_user.txt
+  db_password:
+    file: ./secrets/db_password.txt
+  spring_secrets:
+    file: ./secrets/spring_secrets.properties
 
 networks:
   front-network:
