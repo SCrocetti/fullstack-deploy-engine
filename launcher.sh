@@ -4,9 +4,7 @@
 # 1. ENVIRONMENT VARIABLES LOADING & LANGUAGE SETUP
 # ==============================================================================
 if [ -f .env ]; then
-   set -a
    source .env
-   set +a
 else
     echo "❌ Error: Required .env file not found. / No se encontró el archivo .env."
     exit 1
@@ -16,7 +14,7 @@ if [ -z "$SYSTEM_LANG" ]; then
     SYSTEM_LANG="en"
 fi
 
-declare -A TXT_EXEC_TRACE TXT_WIPING_CTX TXT_START_BUILD TXT_ERR_PATHS \
+declare -rA TXT_EXEC_TRACE TXT_WIPING_CTX TXT_START_BUILD TXT_ERR_PATHS \
            TXT_BUILD_BACKEND TXT_ERR_BACKEND TXT_BUILD_FRONTEND \
            TXT_ERR_FRONTEND TXT_SSH_EMPTY TXT_SSH_DETECTED \
            TXT_DEPLOY_MENU_TITLE TXT_DEPLOY_MENU_LOC TXT_DEPLOY_MENU_REM \
@@ -87,7 +85,7 @@ TXT_ERR_REMOTE[en]="❌ Error: Deployment sequence failed on remote engine host.
 TXT_INVALID_OPTION[en]="Invalid menu alternative. Aborting engine sequence."
 
 LOG_FILE="./launcher.log"
-printf "${TXT_EXEC_TRACE[$SYSTEM_LANG]}" "$(date)" > "$LOG_FILE"
+printf "${TXT_EXEC_TRACE[$SYSTEM_LANG]}" "$(date)" >> "$LOG_FILE"
 
 # ==============================================================================
 # 2. MOTOR ARCHITECTURE UTILITIES & HOOKS
@@ -107,9 +105,8 @@ do_compile() {
 
     echo "${TXT_BUILD_BACKEND[$SYSTEM_LANG]}"
     
-    cd "$BACK_DIR" && ./mvnw clean package -DskipTests >> "$LOG_FILE" 2>&1
+    "$BACK_DIR/mvnw" -f "$BACK_DIR/pom.xml" clean package -DskipTests >> "$LOG_FILE" 2>&1
     MVN_EXIT=$?
-    cd - > /dev/null
     
     if [ $MVN_EXIT -ne 0 ]; then
         printf "${TXT_ERR_BACKEND[$SYSTEM_LANG]}" "$LOG_FILE"
@@ -122,9 +119,8 @@ do_compile() {
 
     echo "${TXT_BUILD_FRONTEND[$SYSTEM_LANG]}"
     
-    cd "$FRONT_DIR" && pnpm build >> "$LOG_FILE" 2>&1
+    pnpm -C "$FRONT_DIR" build >> "$LOG_FILE" 2>&1
     PNPM_EXIT=$?
-    cd - > /dev/null
     
     if [ $PNPM_EXIT -ne 0 ]; then
         printf "${TXT_ERR_FRONTEND[$SYSTEM_LANG]}" "$LOG_FILE"
@@ -148,14 +144,25 @@ do_check_ssh_agent(){
 }
 
 do_inject_secrets() {
-    mkdir -p ./secrets
-    echo "$DB_NAME" > ./secrets/db_name.txt
-    echo "$DB_USER" > ./secrets/db_user.txt
-    echo "$DB_PASSWORD" > ./secrets/db_password.txt
-    
-    echo "spring.datasource.url=jdbc:postgresql://db-service:5432/\${FILE:/run/secrets/db_name}" > ./secrets/spring_secrets.properties
-    echo "spring.datasource.username=\${FILE:/run/secrets/db_user}" >> ./secrets/spring_secrets.properties
-    echo "spring.datasource.password=\${FILE:/run/secrets/db_password}" >> ./secrets/spring_secrets.properties
+    # Save current system umask, set strict umask (user read/write only)
+    OLD_UMASK=$(umask)
+    umask 077
+
+    # Safely create the directory with 700 permissions
+    mkdir -p "./secrets"
+
+    # Generate raw secret files (created with 600 permissions)
+    echo "$DB_NAME" > "./secrets/db_name.txt"
+    echo "$DB_USER" > "./secrets/db_user.txt"
+    echo "$DB_PASSWORD" > "./secrets/db_password.txt"
+
+    # Generate Spring Boot configuration properties
+    echo "spring.datasource.url=jdbc:postgresql://db-service:5432/\${FILE:/run/secrets/db_name}" > "./secrets/spring_secrets.properties"
+    echo "spring.datasource.username=\${FILE:/run/secrets/db_user}" >> "./secrets/spring_secrets.properties"
+    echo "spring.datasource.password=\${FILE:/run/secrets/db_password}" >> "./secrets/spring_secrets.properties"
+
+    # Restore the original system umask
+    umask "$OLD_UMASK"
 }
 
 # ==============================================================================
@@ -171,14 +178,12 @@ case $OPC in
         do_clear
         do_compile
         echo "${TXT_TRIGGER_LOCAL[$SYSTEM_LANG]}"
-        do_inject_secrets
+        do_inject_secrets  # <-- This securely creates everything at 700/600 automatically
         
         docker compose up -d --build --force-recreate --remove-orphans >> "$LOG_FILE" 2>&1
 
         if [ $? -eq 0 ]; then
             echo "${TXT_LOCAL_SUCCESS[$SYSTEM_LANG]}"
-            chmod 700 ./secrets
-            chmod 600 ./secrets/*
             exit 0
         else
             printf "${TXT_ERR_LOCAL[$SYSTEM_LANG]}" "$LOG_FILE"
@@ -200,7 +205,7 @@ case $OPC in
 
         echo "${TXT_PREPARE_REMOTE[$SYSTEM_LANG]}"
 
-        if ! ssh -q project-server "mkdir -p /home/deployer/project-infra && rm -rf /home/deployer/project-infra/secrets && mkdir -p /home/deployer/project-infra/secrets"; then
+        if ! ssh -q project-server "mkdir -p /home/deployer/project-infra && rm -rf /home/deployer/project-infra/secrets /home/deployer/project-infra/backend-build /home/deployer/project-infra/frontend-build"; then
             echo "${TXT_ERR_REMOTE_DIR[$SYSTEM_LANG]}"
             exit 1
         fi
@@ -215,15 +220,18 @@ case $OPC in
         
         ssh -q -T project-server >> "$LOG_FILE" 2>&1 << 'EOF'
             set -e
-            cd /home/deployer/project-infra
+            
+            BASE_DIR="/home/deployer/project-infra"
 
-            trap "rm -rf backend-build frontend-build secrets" EXIT INT TERM
+            chmod 600 "$BASE_DIR/monitor_stack.properties"
+            chmod 700 "$BASE_DIR/secrets" || true
+            chmod 600 "$BASE_DIR/secrets"/* || true
 
-            docker compose up -d --build --force-recreate --remove-orphans
+            trap 'rm -rf "$BASE_DIR/backend-build" "$BASE_DIR/frontend-build" "$BASE_DIR/secrets"' ERR INT TERM
 
-            trap - EXIT INT TERM
-            chmod 700 ./secrets || true
-            chmod 600 ./secrets/* || true
+            docker compose -f "$BASE_DIR/docker-compose.yml" up -d --build --force-recreate --remove-orphans
+
+            trap - ERR INT TERM
 EOF
         if [ $? -eq 0 ]; then
             echo "${TXT_REMOTE_SUCCESS[$SYSTEM_LANG]}"
