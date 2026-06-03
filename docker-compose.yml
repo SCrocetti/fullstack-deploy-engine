@@ -28,7 +28,8 @@ services:
 
   backend-service:
     image: backend:latest
-    container_name: backend
+    deploy:
+      replicas: 1
     restart: always
     build:
       context: ./backend-build
