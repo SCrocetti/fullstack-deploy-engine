@@ -149,6 +149,7 @@
         echo "---------------------------------------------------------" >> "$LOG_FILE"
         exit 1
     fi
+    # !!!!! CAMBIAR PARA QUE ANDE CON UN JSON ARRAY ,USANDO jq !!!!
     UNHEALTHY_CONTAINERS=$(echo "$RAW_PS_OUTPUT" | grep '"Health":"unhealthy"')
 
     # Evaluation Logic Gate
@@ -168,6 +169,7 @@
         trap 'if [ -n "${EMAIL_BODY_FILE}" ]; then rm -f "$EMAIL_BODY_FILE"; fi' EXIT INT TERM
 
 
+        # !!!!! CAMBIAR PARA QUE ANDE CON UN JSON ARRAY ,USANDO jq !!!!
         # Isolate text evaluation mapping paths using localized variables
         if [ "$TESTING" -eq 1 ] && [ -z "$UNHEALTHY_CONTAINERS" ]; then
             CONTAINER_NAMES="${TXT_TEST_RUN[$SYSTEM_LANG]}"
