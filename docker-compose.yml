@@ -28,8 +28,7 @@ services:
 
   backend-service:
     image: backend:latest
-    deploy:
-      replicas: 1
+    scale: 1
     restart: always
     build:
       context: ./backend-build
@@ -66,8 +65,7 @@ services:
     ports:
       - "80:80"
     depends_on:
-      backend-service:
-        condition: service_healthy
+      - backend-service
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
       interval: 10s
