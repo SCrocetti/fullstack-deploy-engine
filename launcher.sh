@@ -71,7 +71,7 @@ TXT_DEPLOY_MENU_REM[en]="2) Deploy REMOTE Infrastructure (SSH Target)"
 TXT_DEPLOY_MENU_PROMPT[en]="Select target pipeline destination [1-2]: "
 TXT_TRIGGER_LOCAL[en]="🏠 Triggering LOCAL container initialization..."
 TXT_LOCAL_SUCCESS[en]="✅ LOCAL DEPLOYMENT SUCCESSFUL"
-TXT_ERR_LOCAL[en]="❌ Error: Local Docker Compose orchestration failed. See %s\n"
+TXT_ERR_LOCAL[en]="❌ Error: Local orchestration failed. See %s\n"
 TXT_ERR_SEC_TITLE[en]="❌ CRITICAL SECURITY ERROR:"
 TXT_ERR_SEC_REQ[en]="   Remote deployment requires BACK_PROFILE to be exactly 'prod'."
 TXT_ERR_SEC_CURR[en]="   Current profile detected in .env: '%s'\n"
@@ -228,7 +228,7 @@ case $OPC in
             chmod 600 "$BASE_DIR/secrets"/* || true
 
             trap 'rm -rf "$BASE_DIR/backend-build" "$BASE_DIR/frontend-build" "$BASE_DIR/secrets"' ERR INT TERM
-
+            
             docker compose -f "$BASE_DIR/docker-compose.yml" up -d --build --force-recreate --remove-orphans
 
             trap - ERR INT TERM
