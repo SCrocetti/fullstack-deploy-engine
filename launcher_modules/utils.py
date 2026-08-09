@@ -4,26 +4,32 @@ import shutil
 import logging
 import subprocess
 from paramiko.config import SSHConfig
-from .configuraciones import (
+from .configurations import (
     LANGUAGE, 
     PROJECT_NAME, 
-    ALIAS_SSH_CONECTION, 
+    ALIAS_SSH_CONNECTION, 
     BACK_PROFILE
 )
-from log_messages import (
+from .log_messages import (
     ERR_DEPENDENCY_NOT_FOUND,
     INFO_EXECUTING_COMMAND, 
     ERR_COMMAND_EXECUTION_FAILED, 
     EXCEPTION_BACK_PROFILE_NOT_DEFINED, 
     EXCEPTION_BACK_PROFILE_NOT_PROD, 
     ERR_BACK_PROFILE_VALIDATION_FAILED, 
-    ERR_ALIAS_SSH_CONECTION_NOT_DEFINED, 
+    ERR_ALIAS_SSH_CONNECTION_NOT_DEFINED, 
     ERR_SSH_KEY_NOT_FOUND, 
+    ERR_SSH_KEY_PUBLIC_FORMAT_INVALID,
     ERR_SSH_KEY_PUBLIC_NOT_FOUND, 
-    INFO_VERIFIYING_KEY_IN_AGENT
+    INFO_VERIFIYING_KEY_IN_AGENT,
+    ERR_FAILED_AGENT_VERIFICATION,
+    INFO_KEY_LOADED,
+    WARNING_KEY_NOT_LOADED,
+    INFO_KEY_LOADED_SUCCESSFULLY,
+    ERR_FAILED_TO_LOAD_KEY
 )
 def verify_dependencies():
-    """Checks that essential CLI tools are installed on the system.""""
+    """Checks that essential CLI tools are installed on the system."""
     for comand in ["docker", "pnpm"]:
         if not shutil.which(comand):
             logging.error(ERR_DEPENDENCY_NOT_FOUND[LANGUAGE](comand))
@@ -64,8 +70,8 @@ def prepare_ssh_agent():
     so that the user can enter the passphrase.
     """
     
-    if not ALIAS_SSH_CONECTION:
-        logging.error(ERR_ALIAS_SSH_CONECTION_NOT_DEFINED[LANGUAGE])
+    if not ALIAS_SSH_CONNECTION:
+        logging.error(ERR_ALIAS_SSH_CONNECTION_NOT_DEFINED[LANGUAGE])
         sys.exit(1)
         
     ssh_config_path = os.path.expanduser("~/.ssh/config")
@@ -75,20 +81,23 @@ def prepare_ssh_agent():
         with open(ssh_config_path, "r") as f:
             config = SSHConfig()
             config.parse(f)
-            host_config = config.lookup(ALIAS_SSH_CONECTION)
+            host_config = config.lookup(ALIAS_SSH_CONNECTION)
             if 'identityfile' in host_config:
                 key_path = os.path.expanduser(host_config['identityfile'][0])
 
     if not key_path:
-        logging.error(ERR_SSH_KEY_NOT_FOUND[LANGUAGE](ALIAS_SSH_CONECTION))
+        logging.error(ERR_SSH_KEY_NOT_FOUND[LANGUAGE](ALIAS_SSH_CONNECTION))
         sys.exit(1)
         
     pub_key_path = f"{key_path}.pub"
     
     try:
         with open(pub_key_path, "r") as f:
-            pub_content = f.read().strip().split()[1] 
-    except FileNotFoundError:
+            parts = f.read().strip().split()
+            if len(parts) < 2:
+                raise IndexError(ERR_SSH_KEY_PUBLIC_FORMAT_INVALID[LANGUAGE])
+            pub_content = parts[1] 
+    except (FileNotFoundError, IndexError) as e:
         logging.error(ERR_SSH_KEY_PUBLIC_NOT_FOUND[LANGUAGE](pub_key_path))
         sys.exit(1)
 
@@ -109,9 +118,9 @@ def prepare_ssh_agent():
         sys.exit(1)
 
     if pub_content in keys_in_agent:
-        logging.info(INFO_KEY_LOADED[LANGUAGE](ALIAS_SSH_CONECTION))
+        logging.info(INFO_KEY_LOADED[LANGUAGE](ALIAS_SSH_CONNECTION))
     else:
-        logging.warning(WARNING_KEY_NOT_LOADED[LANGUAGE](ALIAS_SSH_CONECTION))
+        logging.warning(WARNING_KEY_NOT_LOADED[LANGUAGE](ALIAS_SSH_CONNECTION))
         
         try:
             subprocess.run(
