@@ -3,7 +3,7 @@ import sys
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-from log_messages import ERR_CANT_LOAD_ENV, ERR_INVALID_LANGUAGE
+from .log_messages import ERR_CANT_LOAD_ENV, ERR_INVALID_LANGUAGE
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,7 +34,7 @@ if LANGUAGE not in ["ENG", "ESP"]:
 PROJECT_NAME = os.getenv("PROJECT_NAME", "my_project")
 
 INFISICAL_PROJECT_ID= os.getenv("INFISICAL_PROJECT_ID")
-ALIAS_SSH_CONECTION = os.getenv("ALIAS_SSH_CONECTION")
+ALIAS_SSH_CONNECTION = os.getenv("ALIAS_SSH_CONNECTION")
 
 BACK_PROFILE= os.getenv("BACK_PROFILE", "prod")
 BACK_DIR = Path(os.getenv("BACK_DIR", "backend"))
@@ -42,4 +42,4 @@ FRONT_DIR = Path(os.getenv("FRONT_DIR", "frontend"))
 
 DEPLOYMENT_DIR = Path("/opt") / PROJECT_NAME
 
-INFRAESTRUCTURE_DIR = DEPLOYMENT_DIR / "infraestructure"
+INFRASTRUCTURE_DIR = DEPLOYMENT_DIR / "infrastructure"
