@@ -23,3 +23,6 @@
 *.war
 dist/
 target/
+
+### Python cache
+__pycache__
