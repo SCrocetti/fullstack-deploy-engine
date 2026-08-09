@@ -2,28 +2,32 @@ import sys
 import shutil
 import logging
 from .utils import execute_command
-from .configuraciones import (
+from .configurations import (
+    LANGUAGE,
     PROJECT_NAME, 
     FRONTEND_BUILD_DIR, 
     PUBLIC_BACK_BUILD_DIR,
     BACK_DIR, 
     FRONT_DIR
 )
-from log_messages import (
+from .log_messages import (
     INFO_COMPILING_BACKEND,
-    ERRR_BACK_DIR_NOT_FOUND,
+    ERR_BACK_DIR_NOT_FOUND,
     COMMAND_BACKEND_COMPILATION,
     INFO_COMPILING_FRONTEND,
     ERR_FRONT_DIR_NOT_FOUND,
     COMMAND_FRONTEND_COMPILATION,
+    ERR_BACKEND_ARTIFACT_NOT_FOUND,
+    ERR_FRONTEND_ARTIFACT_NOT_FOUND,
     INFO_STARTING_COMPILATION_PIPELINE
 )
 def compile_backend():
     """Compiles the backend of the project and copies its artifact to the build directory."""
     logging.info(INFO_COMPILING_BACKEND[LANGUAGE](PROJECT_NAME))
     if not BACK_DIR.exists():
-        logging.error(ERRR_BACK_DIR_NOT_FOUND[LANGUAGE])
+        logging.error(ERR_BACK_DIR_NOT_FOUND[LANGUAGE])
         sys.exit(1)
+        
     execute_command("./mvnw clean package -DskipTests", BACK_DIR, COMMAND_BACKEND_COMPILATION[LANGUAGE])
     PUBLIC_BACK_BUILD_DIR.mkdir(parents=True, exist_ok=True)
     
@@ -32,6 +36,10 @@ def compile_backend():
         jars_encontrados = list((BACK_DIR / "target").glob("*.jar"))
         if jars_encontrados: 
             jar_origen = jars_encontrados[0]
+
+    if not jar_origen.exists():
+        logging.error(ERR_BACKEND_ARTIFACT_NOT_FOUND[LANGUAGE])
+        sys.exit(1)
 
     shutil.copy(jar_origen, PUBLIC_BACK_BUILD_DIR / "app.jar")
     if (BACK_DIR / "Dockerfile").exists():
@@ -43,11 +51,17 @@ def compile_frontend():
     if not FRONT_DIR.exists():
         logging.error(ERR_FRONT_DIR_NOT_FOUND[LANGUAGE])
         sys.exit(1)
+        
     execute_command("pnpm build", FRONT_DIR, COMMAND_FRONTEND_COMPILATION[LANGUAGE])
     
+    out_dir = FRONT_DIR / "out"
+    if not out_dir.exists():
+        logging.error(ERR_FRONTEND_ARTIFACT_NOT_FOUND[LANGUAGE])
+        sys.exit(1)
+
     destino_front_public = FRONTEND_BUILD_DIR / "public-portal" / "out"
     destino_front_public.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(FRONT_DIR / "out", destino_front_public, dirs_exist_ok=True)
+    shutil.copytree(out_dir, destino_front_public, dirs_exist_ok=True)
 def compile_and_prepare_project():
     """Compiles and prepares the project for deployment, including both backend and frontend components."""
     logging.info(INFO_STARTING_COMPILATION_PIPELINE[LANGUAGE](PROJECT_NAME))
