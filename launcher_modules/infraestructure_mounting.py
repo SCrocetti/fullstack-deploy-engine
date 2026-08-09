@@ -6,7 +6,7 @@ import pwd
 import grp
 import tarfile
 from fabric import Connection
-from .utils import ejecutar_comando
+from .utils import execute_command
 from .configurations import (
     LANGUAGE, 
     PROJECT_NAME,
@@ -14,12 +14,12 @@ from .configurations import (
     FRONTEND_BUILD_DIR, 
     TEMPORAL_DIR, 
     DEPLOYMENT_DIR,
-    INFRAESTRUCTURE_DIR,
-    ALIAS_SSH_CONECTION, 
+    INFRASTRUCTURE_DIR,
+    ALIAS_SSH_CONNECTION, 
     INFISICAL_PROJECT_ID, 
     BACK_PROFILE
 )
-from log_messages import (
+from .log_messages import (
     INFO_CLEANING_TEMPORAL_CONTEXTS,
     WARNING_COULD_NOT_REMOVE_TEMPORAL_DIR,
     INFO_INITIALIZING_FRONTEND_BUILD,
@@ -35,17 +35,17 @@ from log_messages import (
     INFO_LOADING_DEPLOYMENT_IDENTITIES,
     INFO_DEPLOYMENT_IDENTITIES_LOADED,
     ERR_FAILED_TO_LOAD_DEPLOYMENT_IDENTITIES,
-    INFO_RECOVERING_ENVIROMENT_VARIABLES_FOR_REMOTE_DEPLOYMENT,
-    EXCEPTION_CANT_RECOVER_DEPLOYMENT_IDENTITIE_FROM_REMOTE,
+    INFO_RECOVERING_ENVIRONMENT_VARIABLES_FOR_REMOTE_DEPLOYMENT,
+    EXCEPTION_CANT_RECOVER_DEPLOYMENT_IDENTITY_FROM_REMOTE,
     EXCEPTION_INFISICAL_PROJECT_ID_NOT_DEFINED_IN_ENV,
     EXCEPTION_BACK_PROFILE_NOT_DEFINED_IN_ENV,
-    ERR_FAILED_TO_RECOVER_ENVIROMENT_VARIABLES_FOR_REMOTE_DEPLOYMENT,
+    ERR_FAILED_TO_RECOVER_ENVIRONMENT_VARIABLES_FOR_REMOTE_DEPLOYMENT,
     INFO_STARTING_LOCAL_CONTAINERS,
     COMMAND_CONTAINER_ORCHESTRATION_LOCAL,
-    INFO_LOCAL_DEPLOYMENT_SUCCESSFUL,
+    INFO_LOCAL_DEPLOYMENT_SUCCESS,
     ERR_FAILED_TO_EXECUTE_LOCAL_DOCKER_COMPOSE,
     INFO_STARTING_REMOTE_CONTAINERS,
-    INFO_EXCECUTING_REMOTE_DOCKER_COMPOSE,
+    INFO_EXECUTING_REMOTE_DOCKER_COMPOSE,
     INFO_REMOTE_DEPLOYMENT_SUCCESS,
     ERR_FAILED_TO_EXECUTE_REMOTE_DOCKER_COMPOSE
 )
@@ -64,7 +64,7 @@ def initialize_frontend_build():
     logging.info(INFO_INITIALIZING_FRONTEND_BUILD[LANGUAGE])
     FRONTEND_BUILD_DIR.mkdir(parents=True, exist_ok=True)
     shutil.copytree(BASE_DIR / "nginx", FRONTEND_BUILD_DIR, dirs_exist_ok=True)
-def copiying_docker_environment_to_temporal():
+def copying_docker_environment_to_temporal():
     """Copies the Docker environment directories for database and compose to the temporary directory."""
     logging.info(INFO_COPYING_DOCKER_ENVIRONMENT[LANGUAGE])
     shutil.copytree(BASE_DIR / "db-public", TEMPORAL_DIR / "db-public", dirs_exist_ok=True)
@@ -73,36 +73,36 @@ def clean_and_copy_files_to_deployment():
     """Cleans the destination folder on the local host and mounts the infrastructure there."""
     logging.info(INFO_CLEANING_AND_COPYING_FILES_TO_DEPLOYMENT[LANGUAGE])
     
-    shutil.rmtree(infra_dir, ignore_errors=True)
-    infra_dir.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(INFRASTRUCTURE_DIR, ignore_errors=True)
+    INFRASTRUCTURE_DIR.mkdir(parents=True, exist_ok=True)
 
-    shutil.copytree(TEMPORAL_DIR, INFRAESTRUCTURE_DIR, dirs_exist_ok=True)
+    shutil.copytree(TEMPORAL_DIR, INFRASTRUCTURE_DIR, dirs_exist_ok=True)
 
 def clean_and_copy_to_remote_deployment():
     """Cleans the destination folder on the remote host, compresses the temporary directory, uploads it, and decompresses it there."""
-    logging.info(INFO_CONNECTING_TO_REMOTE[LANGUAGE](ALIAS_SSH_CONECTION))
+    logging.info(INFO_CONNECTING_TO_REMOTE[LANGUAGE](ALIAS_SSH_CONNECTION))
     
     tar_file = TEMPORAL_DIR.parent / "temporal.tar.gz"
-    tar_file_route = f"{INFRAESTRUCTURE_DIR}/temporal.tar.gz"
+    tar_file_route = f"{INFRASTRUCTURE_DIR}/temporal.tar.gz"
     
     try:
         logging.info(INFO_COMPRESSING_TEMPORAL_DIR[LANGUAGE](TEMPORAL_DIR))
         with tarfile.open(tar_file, "w:gz") as tar:
             tar.add(str(TEMPORAL_DIR), arcname=".")
 
-        with Connection(ALIAS_SSH_CONECTION) as c:
-            infraestructure_dir_str = str(INFRAESTRUCTURE_DIR)
+        with Connection(ALIAS_SSH_CONNECTION) as c:
+            infrastructure_dir_str = str(INFRASTRUCTURE_DIR)
             
-            logging.info(INFO_REMOVING_REMOTE_DIR[LANGUAGE](infraestructure_dir_str))
-            c.run(f"rm -rf {infraestructure_dir_str}")
-            logging.info(INFO_CREATING_REMOTE_DIR[LANGUAGE](infraestructure_dir_str))
-            c.run(f"mkdir -p {infraestructure_dir_str}")
+            logging.info(INFO_REMOVING_REMOTE_DIR[LANGUAGE](infrastructure_dir_str))
+            c.run(f"rm -rf {infrastructure_dir_str}")
+            logging.info(INFO_CREATING_REMOTE_DIR[LANGUAGE](infrastructure_dir_str))
+            c.run(f"mkdir -p {infrastructure_dir_str}")
 
             logging.info(INFO_TRANSFERRING_COMPRESSED_FILE[LANGUAGE])
             c.put(str(tar_file), remote=tar_file_route)
             
-            logging.info(INFO_DECOMPRESSING_REMOTE_DIR[LANGUAGE](infraestructure_dir_str))
-            c.run(f"tar -xzf {tar_file_route} -C {infraestructure_dir_str}")
+            logging.info(INFO_DECOMPRESSING_REMOTE_DIR[LANGUAGE](infrastructure_dir_str))
+            c.run(f"tar -xzf {tar_file_route} -C {infrastructure_dir_str}")
             
             c.run(f"rm {tar_file_route}")
             
@@ -123,22 +123,22 @@ def load_deployment_identities():
         gid = grp.getgrnam("deployer-group").gr_gid
         
         os.environ["DEPLOYER_UID"] = str(uid)
-        os.environ["GRUPO_DEPLOYER_GID"] = str(gid)
+        os.environ["DEPLOYER_GROUP_GID"] = str(gid)
         
         logging.info(INFO_DEPLOYMENT_IDENTITIES_LOADED[LANGUAGE](uid, gid))
     except KeyError as e:
         logging.error(ERR_FAILED_TO_LOAD_DEPLOYMENT_IDENTITIES[LANGUAGE](e))
         sys.exit(1)
-def obtain_remote_enviroment_variables():
+def obtain_remote_environment_variables():
     """
-    Recovers the enviroment variables needed to start the remote deployment on docker
-    Returns a dictionary with the enviroment variables ready to use
+    Recovers the environment variables needed to start the remote deployment on docker
+    Returns a dictionary with the environment variables ready to use
     """
-    logging.info(INFO_RECOVERING_ENVIROMENT_VARIABLES_FOR_REMOTE_DEPLOYMENT[LANGUAGE])
+    logging.info(INFO_RECOVERING_ENVIRONMENT_VARIABLES_FOR_REMOTE_DEPLOYMENT[LANGUAGE])
     try:
         uid=""
         gid=""
-        with Connection(ALIAS_SSH_CONECTION) as c:
+        with Connection(ALIAS_SSH_CONNECTION) as c:
             uid_res = c.run("id -u deployer", hide=True)
             uid = uid_res.stdout.strip()
             
@@ -146,7 +146,7 @@ def obtain_remote_enviroment_variables():
             gid = gid_res.stdout.strip()
         
         if not uid or not gid:
-            raise ValueError(EXCEPTION_CANT_RECOVER_DEPLOYMENT_IDENTITIE_FROM_REMOTE[LANGUAGE])
+            raise ValueError(EXCEPTION_CANT_RECOVER_DEPLOYMENT_IDENTITY_FROM_REMOTE[LANGUAGE])
 
         if not INFISICAL_PROJECT_ID:
             raise ValueError(EXCEPTION_INFISICAL_PROJECT_ID_NOT_DEFINED_IN_ENV[LANGUAGE])
@@ -161,17 +161,17 @@ def obtain_remote_enviroment_variables():
         }
         
     except Exception as e:
-        logging.error(ERR_FAILED_TO_RECOVER_ENVIROMENT_VARIABLES_FOR_REMOTE_DEPLOYMENT[LANGUAGE](e))
+        logging.error(ERR_FAILED_TO_RECOVER_ENVIRONMENT_VARIABLES_FOR_REMOTE_DEPLOYMENT[LANGUAGE](e))
         sys.exit(1)
 def launch_docker_orchestration_local():
     """Launches the Docker Compose command to bring up the local infrastructure."""
     logging.info(INFO_STARTING_LOCAL_CONTAINERS[LANGUAGE])
-    cargar_identidades_despliegue()
+    load_deployment_identities()
     comando_compose = "docker compose up -d --build --force-recreate --remove-orphans"
     
-    if ejecutar_comando(comando_compose, DEPLOYMENT_DIR / "infraestructura", COMMAND_CONTAINER_ORCHESTRATION_LOCAL[LANGUAGE]):
+    if execute_command(comando_compose, INFRASTRUCTURE_DIR, COMMAND_CONTAINER_ORCHESTRATION_LOCAL[LANGUAGE]):
         logging.info("======================================================================")
-        logging.info(INFO_LOCAL_DEPLOYMENT_SUCCESSFUL[LANGUAGE])
+        logging.info(INFO_LOCAL_DEPLOYMENT_SUCCESS[LANGUAGE])
         logging.info("======================================================================")
     else:
         logging.error(ERR_FAILED_TO_EXECUTE_LOCAL_DOCKER_COMPOSE[LANGUAGE])
@@ -179,22 +179,22 @@ def launch_docker_orchestration_local():
 def launch_docker_orchestration_remote():
     """Launches the Docker Compose command to bring up the remote infrastructure."""
     logging.info(INFO_STARTING_REMOTE_CONTAINERS[LANGUAGE])
-    logging.info(INFO_CONNECTING_TO_REMOTE[LANGUAGE](ALIAS_SSH_CONECTION))
+    logging.info(INFO_CONNECTING_TO_REMOTE[LANGUAGE](ALIAS_SSH_CONNECTION))
     try:
-        env_remoto = obtener_variables_entorno_remotas()
-        with Connection(ALIAS_SSH_CONECTION) as c:
+        env_remoto = obtain_remote_environment_variables()
+        with Connection(ALIAS_SSH_CONNECTION) as c:
             
             
             comando_compose = "docker compose up -d --build --force-recreate --remove-orphans"
             
-            logging.info(INFO_EXCECUTING_REMOTE_DOCKER_COMPOSE[LANGUAGE](INFRAESTRUCTURE_DIR))
+            logging.info(INFO_EXECUTING_REMOTE_DOCKER_COMPOSE[LANGUAGE](INFRASTRUCTURE_DIR))
             
-            with c.cd(INFRAESTRUCTURE_DIR):
+            with c.cd(str(INFRASTRUCTURE_DIR)):
                 c.run(comando_compose, env=env_remoto)
                 
         logging.info("======================================================================")
         logging.info(INFO_REMOTE_DEPLOYMENT_SUCCESS[LANGUAGE])
         logging.info("======================================================================")
     except Exception as e:
-        logging.error(ERR_FAILED_TO_EXECUTE_REMOTE_DOCKER_COMPOSE[LANGUAGE](ALIAS_SSH_CONECTION, e))
+        logging.error(ERR_FAILED_TO_EXECUTE_REMOTE_DOCKER_COMPOSE[LANGUAGE](ALIAS_SSH_CONNECTION, e))
         sys.exit(1)
