@@ -8,12 +8,12 @@ import logging
 
 from launcher_modules.utils import verify_dependencies, validate_backend_profile, prepare_ssh_agent
 
-from launcher_modules.infraestructure_mounting import (
+from launcher_modules.infrastructure_mounting import (
     clean_temporal_contexts,
     initialize_frontend_build,
-    copy_docker_environment_to_temporal,
-    copy_files_to_deployment,
-    copy_files_to_remote_deployment,
+    copying_docker_environment_to_temporal,
+    clean_and_copy_files_to_deployment,
+    clean_and_copy_to_remote_deployment,
     launch_docker_orchestration_local,
     launch_docker_orchestration_remote
 )
@@ -21,15 +21,17 @@ from launcher_modules.infraestructure_mounting import (
 from launcher_modules.project_compiling import (
     compile_and_prepare_project
 )
-from launcher_modules.configuraciones import (
+from launcher_modules.configurations import (
     LANGUAGE
 )
 from launcher_modules.log_messages import (
     ERR_DEPLOYMENT_FAILED
 )
 
+MENU_TITTLE= {}
 MENU_TITTLE ["ENG"] = "=== DEPLOYMENT ENGINE (PYTHON ENGINE) ==="
 MENU_TITTLE ["ESP"] = "=== MOTOR DE DESPLIEGUE (MOTOR PYTHON) ==="
+MENU_OPTIONS= {}
 MENU_OPTIONS ["ENG"] = [
     "1. Local Deployment",
     "2. Remote Deployment",
@@ -40,8 +42,10 @@ MENU_OPTIONS ["ESP"] = [
     "2. Despliegue Remoto",
     "3. Salir"
 ]
+MENU_PROMPT = {}
 MENU_PROMPT ["ENG"] = "\nSelect an option from 1 to 3: "
-MENU_PROMPT ["ESP"] = "\nSeleccione una opción del 1 al 3:
+MENU_PROMPT ["ESP"] = "\nSeleccione una opción del 1 al 3:"
+MENU_INVALID_OPTION = {}
 MENU_INVALID_OPTION ["ENG"] = "❌ Invalid option. Please try again."
 MENU_INVALID_OPTION ["ESP"] = "❌ Opción inválida. Por favor, inténtelo de nuevo."
 
@@ -54,8 +58,8 @@ def local_deployment():
     
     compile_and_prepare_project()
     
-    copiying_docker_environment_to_temporal()
-    clean_destination_folder_and_copy_files_to_deployment()
+    copying_docker_environment_to_temporal()
+    clean_and_copy_files_to_deployment()
     launch_docker_orchestration_local()
     
     clean_temporal_contexts()
@@ -72,7 +76,7 @@ def remote_deployment():
     
     compile_and_prepare_project()
     
-    copy_docker_environment_to_temporal()
+    copying_docker_environment_to_temporal()
     clean_and_copy_to_remote_deployment()
     launch_docker_orchestration_remote()
     
