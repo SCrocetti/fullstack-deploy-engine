@@ -37,6 +37,10 @@ ERR_SSH_KEY_PUBLIC_NOT_FOUND = {}
 ERR_SSH_KEY_PUBLIC_NOT_FOUND ["ENG"] = lambda pub_key_path: f"❌ Error: Public key not found at '{pub_key_path}'."
 ERR_SSH_KEY_PUBLIC_NOT_FOUND ["ESP"] = lambda pub_key_path: f"❌ Error: No se encontró la llave pública en '{pub_key_path}'."
 
+ERR_SSH_KEY_PUBLIC_FORMAT_INVALID = {}
+ERR_SSH_KEY_PUBLIC_FORMAT_INVALID ["ENG"] = "❌ Error: The public key file does not contain the expected format."
+ERR_SSH_KEY_PUBLIC_FORMAT_INVALID ["ESP"] = "❌ Error: El archivo de clave pública no contiene el formato esperado."
+
 INFO_VERIFIYING_KEY_IN_AGENT = {}
 INFO_VERIFIYING_KEY_IN_AGENT ["ENG"] = "🔑 Verifying if the project's key is loaded in the SSH Agent..."
 INFO_VERIFIYING_KEY_IN_AGENT ["ESP"] = "🔑 Verificando si la llave del proyecto está cargada en el Agente SSH..."
